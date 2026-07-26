@@ -2,16 +2,16 @@ name: Daily Business News Agent
 
 on:
   schedule:
-    # Runs every day at 8:00 AM UTC (Adjust time if needed)
+    # Runs every day at 8:00 AM UTC
     - cron: '0 8 * * *'
-  workflow_dispatch: # Allows manual trigger from GitHub UI for testing
+  workflow_dispatch: # Allows manual run button in GitHub UI
 
 jobs:
   run-news-agent:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check out repo
+      - name: Check out repository
         uses: actions/checkout@v3
 
       - name: Set up Python
@@ -22,37 +22,10 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install google-generativeai feedparser requests
+          pip install -r requirements.txt
 
-      - name: Run News Agent Script
+      - name: Run News Agent
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-        run: |
-          python -c "
-          import os, json, requests, feedparser
-          import google.generativeai as genai
-
-          genai.configure(api_key=os.environ['GEMINI_API_KEY'])
-
-          TOPICS = {
-              '🌐 General Business': 'https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=en-US&gl=US&ceid=US:en',
-              '💻 Tech & AI': 'https://news.google.com/rss/search?q=artificial+intelligence+tech+business&hl=en-US&gl=US&ceid=US:en',
-              '📈 Markets & Economy': 'https://news.google.com/rss/search?q=stock+market+economy&hl=en-US&gl=US&ceid=US:en'
-          }
-
-          full_slack_message = '🚨 *Daily Multi-Topic Business Digest* 🚨\n\n'
-          model = genai.GenerativeModel('gemini-1.5-flash')
-
-          for topic_name, feed_url in TOPICS.items():
-              feed = feedparser.parse(feed_url)
-              articles = feed.entries[:3]
-              if articles:
-                  raw_text = ''.join([f'- {a.title} ({a.link})\n' for a in articles])
-                  prompt = f'Summarize these news items for topic {topic_name} into 2 bullet points for Slack with links in format <URL|Title>:\n{raw_text}'
-                  summary = model.generate_content(prompt).text
-                  full_slack_message += f'### {topic_name}\n{summary}\n\n---\n\n'
-
-          requests.post(os.environ['SLACK_WEBHOOK_URL'], json={'text': full_slack_message})
-          print('Successfully posted to Slack!')
-          "
+        run: python main.py
