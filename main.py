@@ -2,13 +2,14 @@ import os
 import json
 import requests
 import feedparser
-import google.generativeai as genai
+from google import genai
 
-# Load environment variables from GitHub Secrets
+# Load environment variables
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 SLACK_WEBHOOK_URL = os.environ.get("SLACK_WEBHOOK_URL")
 
-genai.configure(api_key=GEMINI_API_KEY)
+# Initialize the modern Google GenAI Client
+client = genai.Client(api_key=GEMINI_API_KEY)
 
 TOPICS = {
     "🌐 General Business": "https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=en-US&gl=US&ceid=US:en",
@@ -27,9 +28,6 @@ def fetch_topic_news(feed_url):
     return articles
 
 def generate_topic_digest(topic_name, articles):
-    # Updated to gemini-2.5-flash
-    model = genai.GenerativeModel('gemini-2.5-flash')
-    
     raw_text = ""
     for idx, a in enumerate(articles, 1):
         raw_text += f"{idx}. Title: {a['title']}\n   Link: {a['link']}\n\n"
@@ -47,8 +45,20 @@ def generate_topic_digest(topic_name, articles):
     {raw_text}
     """
     
-    response = model.generate_content(prompt)
-    return response.text
+    try:
+        # Use the updated standard model for free tier
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+        )
+        return response.text
+    except Exception as e:
+        print(f"⚠️ Gemini API Error for {topic_name}: {e}")
+        # Fallback: Output raw headlines if AI fails
+        fallback_text = "*(AI Summary unavailable, raw headlines below)*\n"
+        for a in articles:
+            fallback_text += f"• <{a['link']}|{a['title']}>\n"
+        return fallback_text
 
 def run_news_agent():
     print("Starting news generation...")
