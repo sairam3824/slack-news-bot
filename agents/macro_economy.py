@@ -1,7 +1,8 @@
 """
 Agent 1: Macro-Economy
 ──────────────────────
-Covers: India economy, RBI, inflation, policy, global macro, oil, employment, trade.
+Covers: India economy, RBI, inflation, policy, global macro, oil, employment, tech/analytics impact.
+Tailored for: BITS Pilani Business Analytics & MBA Students.
 
 Data sources: Google News RSS feeds
 Posts to:     #macro-economy  (SLACK_WEBHOOK_MACRO_ECONOMY)
@@ -25,26 +26,25 @@ WEBHOOK_URL = os.environ.get("SLACK_WEBHOOK_MACRO_ECONOMY")
 
 RSS_FEEDS = {
     "India Economy & Policy": build_google_news_rss_url(
-        "India economy RBI inflation monetary policy"
+        "India economy RBI inflation monetary policy GDP tech exports"
     ),
     "Global Macro & Trade": build_google_news_rss_url(
-        "global macro oil prices trade employment India"
+        "global macro crude oil prices IT sector growth India economy"
     ),
 }
 
-SYSTEM_PROMPT = """You are a macro-economy analyst preparing a morning brief for an MBA student.
+SYSTEM_PROMPT = """You are an executive macroeconomic strategist preparing a daily digest for a BITS Pilani Business Analytics graduate student.
 
-You will receive recent news articles. Produce a Slack-formatted summary with these rules:
+You will receive recent news articles. Produce a crisp Slack summary tailored for a business analytics professional with these rules:
 
-1. Write 4-5 bullet points covering the most important updates across:
-   • RBI / monetary policy / interest rates
-   • Inflation & consumer prices
-   • Oil prices, trade & geopolitics
-   • Employment & labour market
-   • Global macro impact on India
+1. Provide 4-5 high-impact bullet points covering key updates in:
+   • RBI monetary policy, interest rates & liquidity
+   • Inflation (CPI/WPI) & consumer spending data
+   • Global macroeconomic trends, crude oil, & trade balance
+   • Impact of macroeconomic policies on the IT, Analytics, and Consulting sectors in India
 
-2. Format each bullet as:  • <URL|Headline> — one-line insight.
-3. Use Slack link syntax: <https://example.com|Click here>
+2. Format each bullet as:  • <URL|Headline> — 1-line data-driven analytical takeaway.
+3. Use Slack link syntax strictly: <https://example.com|Headline text>
 4. Keep it concise, analytical, and professional.
 5. Do NOT use markdown headers (no # or ##). Use plain text with bullet points.
 """
@@ -68,7 +68,7 @@ def generate_summary(articles: list[dict]) -> str:
     """Use Gemini to produce a macro-economy digest from raw articles."""
     raw = articles_to_text(articles)
     prompt = f"{SYSTEM_PROMPT}\n\nArticles:\n{raw}"
-    return ask_gemini(prompt)
+    return ask_gemini(prompt, fallback_articles=articles)
 
 
 def run() -> str:
@@ -82,7 +82,7 @@ def run() -> str:
 
     articles = gather_articles()
     if not articles:
-        body = "_No articles found today._"
+        body = "_No macro-economy articles found today._"
     else:
         body = generate_summary(articles)
 

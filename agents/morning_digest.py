@@ -2,7 +2,7 @@
 Agent 7: Morning Digest (Action Agent)
 ────────────────────────────────────────
 Aggregates output from all 6 specialist agents, deduplicates, prioritizes,
-ranks, and creates a single morning action brief.
+ranks, and creates a single morning action brief tailored for BITS Pilani Business Analytics students.
 
 Posts to: #morning-digest  (SLACK_WEBHOOK_MORNING_DIGEST)
 """
@@ -24,43 +24,33 @@ from agents import campus_opportunities
 
 WEBHOOK_URL = os.environ.get("SLACK_WEBHOOK_MORNING_DIGEST")
 
-ACTION_PROMPT = """You are an executive action agent creating a TOP-10 morning brief.
+ACTION_PROMPT = """You are an executive career & intelligence strategist creating a TOP-10 Morning Action Brief for a BITS Pilani Business Analytics student.
 
-You have received outputs from 6 specialist agents:
+You will receive the aggregated outputs from 6 specialist agents:
 1. 🏦 Macro-Economy
 2. 📊 Markets & Business
-3. 🎓 MBA Internship Radar
+3. 🎓 MBA & Analytics Internships
 4. 📈 Analytics Role Radar
 5. 🏆 Unstop Competitions
-6. 🎪 BITS Pilani Campus
+6. 🎪 BITS Pilani (Pilani Campus) Opportunities
 
-Your job:
+Your Job:
 
 STEP 1 — DEDUPLICATE
-Remove any items that appear in multiple agent outputs.
+Filter out any duplicate news items or repeated internship/competition listings.
 
-STEP 2 — PRIORITIZE & RANK
-Rank the top 10 items by urgency using this priority order:
-  P1 (🔴 Act Today):     Deadlines within 48 hours
-  P2 (🟡 This Week):     Deadlines within 7 days or breaking news
-  P3 (🟢 On Your Radar): Important but no immediate deadline
+STEP 2 — PRIORITIZE & RANK (TOP 10 ITEMS TOTAL)
+Categorize items by actionability and urgency into 3 priority buckets:
 
-STEP 3 — FORMAT
-Create a Slack message with this structure:
+  🔴 *ACT TODAY (Urgent < 48 hrs)* — Imminent application deadlines for internships/competitions or critical breaking events.
+  🟡 *THIS WEEK (High Priority)* — Key job openings, upcoming case comps, and major tech/business industry shifts.
+  🟢 *ON YOUR RADAR (Strategic Context)* — Essential macroeconomic signals, sector trends, or BITS campus announcements.
 
-🔴 *ACT TODAY*
-• [item] — deadline / action required
-
-🟡 *THIS WEEK*
-• [item] — deadline / action required
-
-🟢 *ON YOUR RADAR*
-• [item] — why it matters
-
-Use Slack link syntax: <URL|Title>
-Keep each item to ONE line.
-Do NOT use markdown headers (no # or ##). Use plain text with the emoji + bold pattern above.
-Maximum 10 items total across all priority levels.
+STEP 3 — FORMAT FOR SLACK
+• Use Slack link syntax strictly: <https://example.com|Headline or Role Title>
+• Keep each bullet point to ONE clear, high-density line.
+• Do NOT use markdown headers (no # or ##). Use plain text with the emoji headers above.
+• Include up to 10 bullet points maximum across all buckets combined.
 """
 
 # ---------------------------------------------------------------------------
@@ -95,7 +85,7 @@ def collect_all_outputs() -> dict[str, str]:
             outputs[label] = result
         except Exception as e:
             print(f"  ⚠️  {label} failed: {e}")
-            outputs[label] = f"_(Agent failed: {e})_"
+            outputs[label] = f"_(Agent update currently offline)_"
     return outputs
 
 
@@ -109,7 +99,7 @@ def build_combined_input(outputs: dict[str, str]) -> str:
 
 def generate_action_brief(combined: str) -> str:
     """Use Gemini to deduplicate, prioritize, and rank the top 10 items."""
-    prompt = f"{ACTION_PROMPT}\n\n--- AGENT OUTPUTS ---\n{combined}"
+    prompt = f"{ACTION_PROMPT}\n\n--- SPECIALIST AGENT OUTPUTS ---\n{combined}"
     return ask_gemini(prompt)
 
 
@@ -136,7 +126,7 @@ def run() -> str:
     body = generate_action_brief(combined)
 
     # Step 3: Post to Slack
-    header = format_header("☀️", "Morning Action Brief")
+    header = format_header("☀️", "BITS Pilani Morning Action Brief")
     message = f"{header}\n\n{body}"
     post_to_slack(WEBHOOK_URL, message)
 

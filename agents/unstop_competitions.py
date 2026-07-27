@@ -1,9 +1,10 @@
 """
 Agent 5: Unstop Competitions
 ─────────────────────────────
-Covers: Case comps, quizzes, hackathons, business contests, brand challenges.
+Covers: Case comps, business analytics hackathons, quizzes, brand challenges on Unstop.
+Tailored for: BITS Pilani Business Analytics & Management Students.
 
-Data source: Gemini with Google Search grounding (Unstop has no public API/RSS)
+Data source: Gemini with Google Search grounding (Unstop search)
 Posts to:    #unstop-competitions  (SLACK_WEBHOOK_UNSTOP_COMPETITIONS)
 """
 
@@ -13,6 +14,8 @@ from agents.base_agent import (
     ask_gemini,
     post_to_slack,
     format_header,
+    fetch_rss,
+    build_google_news_rss_url,
 )
 
 # ---------------------------------------------------------------------------
@@ -22,37 +25,36 @@ from agents.base_agent import (
 WEBHOOK_URL = os.environ.get("SLACK_WEBHOOK_UNSTOP_COMPETITIONS")
 
 SEARCH_PROMPT = """Search the web — specifically unstop.com — for the latest active and upcoming
-competitions, hackathons, and challenges for college students in India.
+competitions, hackathons, case challenges, and corporate contests in India suitable for business analytics and MBA/engineering students.
 
-Look for:
-• Case study competitions
-• Business quizzes
-• Hackathons (tech & business)
-• Brand challenges & marketing contests
-• Consulting case competitions
+Target Categories:
+• Corporate Case Competitions (e.g. Tata, Reliance, Mahindra, L'Oreal, Flipkart, TVS, Hero)
+• Business Analytics & Data Science Hackathons
+• Strategy & Management Quizzes
+• Brand Challenges & Product Design Contests
 
-For EACH opportunity, provide:
-  1. Competition name
-  2. Organizer / brand
-  3. Type (case comp, hackathon, quiz, brand challenge, etc.)
-  4. Registration deadline (if available)
-  5. Prize pool (if mentioned)
-  6. Direct link to the listing on unstop.com
+For EACH opportunity found, provide:
+  1. Competition Name
+  2. Organizer / Corporate Brand
+  3. Category (Case Comp, Analytics Hackathon, Business Quiz, Brand Challenge)
+  4. Registration Deadline & Prize Pool
+  5. Direct Application Link on unstop.com (use format: <URL|Apply on Unstop>)
 
-Find 6-10 active competitions. Prioritize those with deadlines in the next 30 days.
-Do NOT use markdown headers (no # or ##). Use plain text with numbered list.
+List 6-8 active competitions with upcoming deadlines.
+Do NOT use markdown headers (no # or ##). Use plain text.
 """
 
-FORMAT_PROMPT = """You are formatting competition listings for Slack.
+FORMAT_PROMPT = """You are formatting competition listings for Slack for BITS Pilani students.
 
-Take the raw competition data below and format it as a clean Slack message:
+Take the raw competition data below and produce a clean, structured Slack message:
 
 1. Number each competition.
-2. For each, show: *Name* by _Organizer_ | Type | Deadline: date | Prize: amount
-   Link: <URL|Apply on Unstop>
-3. Use Slack formatting: *bold* for names, _italic_ for organizers.
-4. Add a separator line between entries.
-5. At the end, add: "🔗 Browse all: <https://unstop.com/competitions|Unstop Competitions>"
+2. For each, display:
+   • *<URL|Competition Name>* by _Organizer_ | Category
+     🏆 Prize & Deadline info
+3. Use Slack markdown syntax: *bold* for names, _italic_ for organizers.
+4. Add a clean separator `───` between entries.
+5. End with: "🔗 *Explore all competitions:* <https://unstop.com/competitions|Unstop Portal>"
 6. Do NOT use markdown headers (no # or ##). Use plain text.
 
 Raw data:
@@ -67,7 +69,14 @@ Raw data:
 def search_competitions() -> str:
     """Use Gemini + Google Search to discover active Unstop competitions."""
     print("  🔍 Searching Unstop for active competitions...")
-    return ask_gemini_with_search(SEARCH_PROMPT)
+    fallback_query = "Unstop case competition analytics hackathon 2026 apply"
+    rss_fallback = fetch_rss(build_google_news_rss_url("Unstop competition case challenge India 2026"), count=5)
+    
+    return ask_gemini_with_search(
+        SEARCH_PROMPT,
+        fallback_articles=rss_fallback,
+        fallback_query=fallback_query
+    )
 
 
 def format_for_slack(raw_data: str) -> str:

@@ -1,7 +1,8 @@
 """
 Agent 2: Markets-to-Business
 ─────────────────────────────
-Covers: Earnings, major business moves, sectors, startups, funding, layoffs, acquisitions.
+Covers: Earnings, tech giants, startups, funding, layoffs, M&A, consulting & analytics industry moves.
+Tailored for: BITS Pilani Business Analytics & MBA Students.
 
 Data sources: Google News RSS feeds
 Posts to:     #markets-business  (SLACK_WEBHOOK_MARKETS_BUSINESS)
@@ -24,27 +25,26 @@ from agents.base_agent import (
 WEBHOOK_URL = os.environ.get("SLACK_WEBHOOK_MARKETS_BUSINESS")
 
 RSS_FEEDS = {
-    "Startups & Funding": build_google_news_rss_url(
-        "India startup funding layoffs acquisitions"
+    "Startups, SaaS & AI Funding": build_google_news_rss_url(
+        "India startup funding SaaS FinTech AI acquisitions layoffs 2026"
     ),
-    "Markets & Earnings": build_google_news_rss_url(
-        "India stock market earnings business sectors quarterly results"
+    "IT, Consulting & Markets": build_google_news_rss_url(
+        "India IT consulting tech earnings TCS Infosys Accenture Google Microsoft quarterly results"
     ),
 }
 
-SYSTEM_PROMPT = """You are a business-markets analyst preparing a morning brief for an MBA student.
+SYSTEM_PROMPT = """You are a corporate strategy & equity research analyst preparing a daily briefing for a BITS Pilani Business Analytics student.
 
-You will receive recent news articles. Produce a Slack-formatted summary with these rules:
+You will receive recent news articles. Produce a Slack summary tailored for tech, analytics, and business professionals:
 
-1. Write 4-5 bullet points covering the most important updates across:
-   • Quarterly earnings & company results
-   • Major M&A / acquisitions
-   • Startup funding rounds & unicorns
-   • Layoffs & restructuring
-   • Sector trends & market moves
+1. Write 4-5 bullet points covering key updates in:
+   • IT Services & Tech Giants earnings/news (TCS, Infosys, Accenture, Google, Microsoft, Amazon)
+   • Startup funding, AI startups, SaaS & FinTech M&A
+   • Layoffs, hiring freezes, or talent demand in tech & consulting
+   • Major enterprise strategy & digital transformation moves
 
-2. Format each bullet as:  • <URL|Headline> — one-line insight.
-3. Use Slack link syntax: <https://example.com|Click here>
+2. Format each bullet as:  • <URL|Company/Topic Headline> — 1-line key strategic insight.
+3. Use Slack link syntax strictly: <https://example.com|Headline text>
 4. Keep it concise, analytical, and professional.
 5. Do NOT use markdown headers (no # or ##). Use plain text with bullet points.
 """
@@ -68,7 +68,7 @@ def generate_summary(articles: list[dict]) -> str:
     """Use Gemini to produce a markets-business digest from raw articles."""
     raw = articles_to_text(articles)
     prompt = f"{SYSTEM_PROMPT}\n\nArticles:\n{raw}"
-    return ask_gemini(prompt)
+    return ask_gemini(prompt, fallback_articles=articles)
 
 
 def run() -> str:
@@ -82,7 +82,7 @@ def run() -> str:
 
     articles = gather_articles()
     if not articles:
-        body = "_No articles found today._"
+        body = "_No business news articles found today._"
     else:
         body = generate_summary(articles)
 

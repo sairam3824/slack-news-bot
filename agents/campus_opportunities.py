@@ -1,9 +1,10 @@
 """
-Agent 6: Campus Opportunities (BITS Pilani)
-────────────────────────────────────────────
-Covers: BITS Pilani events, clubs, competitions, talks, deadlines, peer opportunities.
+Agent 6: Campus Opportunities (BITS Pilani - Pilani Campus)
+─────────────────────────────────────────────────────────────
+Covers: BITS Pilani Campus events, clubs, departmental activities, competitions, talks, deadlines.
+Tailored for: BITS Pilani (Pilani Campus) Business Analytics & Management Students.
 
-Data source: Gemini with Google Search grounding (no official RSS/API)
+Data source: Gemini with Google Search grounding
 Posts to:    #campus-opportunities  (SLACK_WEBHOOK_CAMPUS_OPPORTUNITIES)
 """
 
@@ -14,6 +15,8 @@ from agents.base_agent import (
     post_to_slack,
     format_header,
     today_str,
+    fetch_rss,
+    build_google_news_rss_url,
 )
 
 # ---------------------------------------------------------------------------
@@ -22,47 +25,38 @@ from agents.base_agent import (
 
 WEBHOOK_URL = os.environ.get("SLACK_WEBHOOK_CAMPUS_OPPORTUNITIES")
 
-SEARCH_PROMPT = f"""Search the web for the latest events, opportunities, and activities at
-BITS Pilani (Pilani campus) happening in the coming weeks from {today_str()}.
+SEARCH_PROMPT = f"""Search the web specifically for upcoming events, student opportunities, and academic/club notices at BITS Pilani (Pilani Campus) around {today_str()}.
 
-Look across these sources:
-• Official BITS Pilani website and social media
-• BITS Pilani club pages (technical clubs, cultural clubs, business clubs)
-• BITS Pilani fest pages (APOGEE, BOSM, Oasis)
-• Unstop listings by BITS Pilani student bodies
-• LinkedIn / Instagram posts about BITS Pilani events
+Focus areas for BITS Pilani (Pilani Campus):
+• Management Association (BITSMAN / Dept of Management events & workshops)
+• Technical & Cultural Fests: APOGEE, Oasis, BOSM updates & competition deadlines
+• Student Clubs & Societies: DEVS, Consulting Club, Coding/Data Science Club, Finance Club
+• Guest Lectures, Industry Talks, Webinars & Workshops on Campus
+• Inter-college Hackathons, Case Competitions hosted at BITS Pilani
+• Placement Unit (PU) / Practice School (PS) / Internship updates & peer projects
 
-Find information about:
-• Upcoming campus events, fests, and workshops
-• Club recruitment drives and auditions
-• Inter-college competitions hosted on campus
-• Guest talks, webinars, and seminars
-• Application deadlines for campus programs
-• Peer opportunities (study groups, project teams, mentorship)
+For each item found, provide:
+  1. Event / Opportunity Name
+  2. Organizing Body (Club, Department, Cell)
+  3. Date / Deadline / Venue info
+  4. Brief 1-line description
+  5. Official or registration link (use Slack format: <URL|Link text>)
 
-For each opportunity, provide:
-  1. Event / opportunity name
-  2. Organizing body (club, department, committee)
-  3. Date or deadline
-  4. Brief description (1 line)
-  5. Link (if available)
-
-Find 5-8 items. Prioritize upcoming deadlines.
+List 5-8 relevant events/notices for BITS Pilani students.
 Do NOT use markdown headers (no # or ##). Use plain text.
 """
 
-FORMAT_PROMPT = """You are formatting campus opportunity listings for Slack.
+FORMAT_PROMPT = """You are formatting BITS Pilani (Pilani Campus) opportunity listings for Slack.
 
-Take the raw data below and format it as a clean Slack message:
+Take the raw data below and format it as a clean Slack message for Pilani campus students:
 
 1. Number each item.
-2. For each, show:
-   *Event Name* | _Organizing Body_
-   📅 Date/Deadline | Brief description
-   🔗 <URL|Link> (if available)
+2. For each, display:
+   • *<URL|Event Name>* | _Organizing Body_
+     📅 Date/Deadline | Details
 3. Use Slack formatting: *bold* for event names, _italic_ for organizers.
-4. Add a ─── separator between entries.
-5. End with: "📌 Stay updated with your campus community!"
+4. Add a clean separator `───` between entries.
+5. End with: "📌 *BITS Pilani Campus Portal:* <https://www.bits-pilani.ac.in/pilani/|BITS Pilani Website>"
 6. Do NOT use markdown headers (no # or ##). Use plain text.
 
 Raw data:
@@ -76,8 +70,15 @@ Raw data:
 
 def search_campus_events() -> str:
     """Use Gemini + Google Search to discover BITS Pilani campus events."""
-    print("  🔍 Searching for BITS Pilani campus opportunities...")
-    return ask_gemini_with_search(SEARCH_PROMPT)
+    print("  🔍 Searching for BITS Pilani (Pilani Campus) opportunities...")
+    fallback_query = "BITS Pilani campus events APOGEE Oasis Department Management 2026"
+    rss_fallback = fetch_rss(build_google_news_rss_url("BITS Pilani campus competition workshop 2026"), count=5)
+
+    return ask_gemini_with_search(
+        SEARCH_PROMPT,
+        fallback_articles=rss_fallback,
+        fallback_query=fallback_query
+    )
 
 
 def format_for_slack(raw_data: str) -> str:
@@ -93,7 +94,7 @@ def run() -> str:
     Returns the generated summary text (useful for the Morning Digest agent).
     """
     print("🎪 Campus Opportunities Agent starting...")
-    header = format_header("🎪", "BITS Pilani Campus Radar")
+    header = format_header("🎪", "BITS Pilani (Pilani Campus) Radar")
 
     raw_results = search_campus_events()
     body = format_for_slack(raw_results)
