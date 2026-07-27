@@ -1,31 +1,223 @@
-name: Daily Business News Agent
+name: Daily News Agents
 
 on:
   schedule:
-    # Runs daily around 6:00 AM IST (12:27 AM UTC - off-peak minute to avoid delays)
+    # Runs daily around 6:00 AM IST (12:27 AM UTC - off-peak minute)
     - cron: '27 0 * * *'
-  workflow_dispatch: # Allows manual run button in GitHub UI
+  workflow_dispatch:
+    inputs:
+      agent:
+        description: 'Which agent to run'
+        required: true
+        default: 'morning-digest'
+        type: choice
+        options:
+          - macro-economy
+          - markets-business
+          - mba-internships
+          - analytics-roles
+          - unstop-competitions
+          - campus-opportunities
+          - morning-digest
+          - all-individual
 
 jobs:
-  run-news-agent:
-    runs-on: ubuntu-latest
+  # ─────────────────────────────────────────────────────────────────
+  # Individual agent jobs (run in parallel)
+  # ─────────────────────────────────────────────────────────────────
 
+  macro-economy:
+    if: >-
+      github.event_name == 'schedule' ||
+      github.event.inputs.agent == 'macro-economy' ||
+      github.event.inputs.agent == 'all-individual'
+    runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run News Agent
+      - name: Run Macro-Economy Agent
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-        run: python main.py
+          SLACK_WEBHOOK_MACRO_ECONOMY: ${{ secrets.SLACK_WEBHOOK_MACRO_ECONOMY }}
+        run: python -m agents.macro_economy
+
+  markets-business:
+    if: >-
+      github.event_name == 'schedule' ||
+      github.event.inputs.agent == 'markets-business' ||
+      github.event.inputs.agent == 'all-individual'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Markets-Business Agent
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SLACK_WEBHOOK_MARKETS_BUSINESS: ${{ secrets.SLACK_WEBHOOK_MARKETS_BUSINESS }}
+        run: python -m agents.markets_business
+
+  mba-internships:
+    if: >-
+      github.event_name == 'schedule' ||
+      github.event.inputs.agent == 'mba-internships' ||
+      github.event.inputs.agent == 'all-individual'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run MBA Internship Radar
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SLACK_WEBHOOK_MBA_INTERNSHIPS: ${{ secrets.SLACK_WEBHOOK_MBA_INTERNSHIPS }}
+        run: python -m agents.mba_internships
+
+  analytics-roles:
+    if: >-
+      github.event_name == 'schedule' ||
+      github.event.inputs.agent == 'analytics-roles' ||
+      github.event.inputs.agent == 'all-individual'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Analytics Role Radar
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SLACK_WEBHOOK_ANALYTICS_ROLES: ${{ secrets.SLACK_WEBHOOK_ANALYTICS_ROLES }}
+        run: python -m agents.analytics_roles
+
+  unstop-competitions:
+    if: >-
+      github.event_name == 'schedule' ||
+      github.event.inputs.agent == 'unstop-competitions' ||
+      github.event.inputs.agent == 'all-individual'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Unstop Competitions Agent
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SLACK_WEBHOOK_UNSTOP_COMPETITIONS: ${{ secrets.SLACK_WEBHOOK_UNSTOP_COMPETITIONS }}
+        run: python -m agents.unstop_competitions
+
+  campus-opportunities:
+    if: >-
+      github.event_name == 'schedule' ||
+      github.event.inputs.agent == 'campus-opportunities' ||
+      github.event.inputs.agent == 'all-individual'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run Campus Opportunities Agent
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SLACK_WEBHOOK_CAMPUS_OPPORTUNITIES: ${{ secrets.SLACK_WEBHOOK_CAMPUS_OPPORTUNITIES }}
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          python -m agents.campus_opportunities
+
+  # ─────────────────────────────────────────────────────────────────
+  # Morning Digest — runs AFTER all individual agents complete
+  # ─────────────────────────────────────────────────────────────────
+
+  morning-digest:
+    if: >-
+      github.event_name == 'schedule' ||
+      github.event.inputs.agent == 'morning-digest'
+    needs:
+      - macro-economy
+      - markets-business
+      - mba-internships
+      - analytics-roles
+      - unstop-competitions
+      - campus-opportunities
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Morning Digest Agent
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SLACK_WEBHOOK_MACRO_ECONOMY: ${{ secrets.SLACK_WEBHOOK_MACRO_ECONOMY }}
+          SLACK_WEBHOOK_MARKETS_BUSINESS: ${{ secrets.SLACK_WEBHOOK_MARKETS_BUSINESS }}
+          SLACK_WEBHOOK_MBA_INTERNSHIPS: ${{ secrets.SLACK_WEBHOOK_MBA_INTERNSHIPS }}
+          SLACK_WEBHOOK_ANALYTICS_ROLES: ${{ secrets.SLACK_WEBHOOK_ANALYTICS_ROLES }}
+          SLACK_WEBHOOK_UNSTOP_COMPETITIONS: ${{ secrets.SLACK_WEBHOOK_UNSTOP_COMPETITIONS }}
+          SLACK_WEBHOOK_CAMPUS_OPPORTUNITIES: ${{ secrets.SLACK_WEBHOOK_CAMPUS_OPPORTUNITIES }}
+          SLACK_WEBHOOK_MORNING_DIGEST: ${{ secrets.SLACK_WEBHOOK_MORNING_DIGEST }}
+        run: python -m agents.morning_digest
